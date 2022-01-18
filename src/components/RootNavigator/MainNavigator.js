@@ -10,7 +10,6 @@ import AccountsNavigator from "./AccountsNavigator";
 import ManagerNavigator, { ManagerTabIcon } from "./ManagerNavigator";
 import PlatformNavigator from "./PlatformNavigator";
 import TabIcon from "../TabIcon";
-import AccountsIcon from "../../icons/Accounts";
 
 import Tab from "./CustomBlockRouterNavigator";
 
