@@ -465,7 +465,6 @@ export default class Root extends Component<
                                 >
                                   <ButtonUseTouchable.Provider value={true}>
                                     <OnboardingContextProvider>
-                                      <FirmwareUpdateBanner />
                                       <ToastProvider>
                                         <NotificationsProvider>
                                           <SnackbarContainer />
