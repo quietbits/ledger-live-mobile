@@ -19,12 +19,15 @@ import { useMarketData } from "@ledgerhq/live-common/lib/market/MarketDataProvid
 import { rangeDataTable } from "@ledgerhq/live-common/lib/market/utils/rangeDataTable";
 import { FlatList, RefreshControl, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MarketListRequestParams } from "@ledgerhq/live-common/lib/market/types";
 import { starredMarketCoinsSelector } from "../../reducers/settings";
 import MarketRowItem from "./MarketRowItem";
 import { useLocale } from "../../context/Locale";
 import SortBadge, { Badge } from "./SortBadge";
 import SearchHeader from "./SearchHeader";
 import { ScreenName } from "../../const";
+import { track } from "../../analytics";
+import TrackScreen from "../../analytics/TrackScreen";
 
 export const BackButton = ({ navigation }: { navigation: any }) => (
   <Button
@@ -34,6 +37,16 @@ export const BackButton = ({ navigation }: { navigation: any }) => (
   />
 );
 
+function getAnalyticsProperties(requestParams: MarketListRequestParams) {
+  return {
+    access: false,
+    sort: `${requestParams.orderBy}_${requestParams.order}`,
+    "%change": requestParams.range,
+    countervalue: requestParams.counterCurrency,
+    view: requestParams.liveCompatible ? "Only Live Supported" : "All coins",
+  };
+}
+
 const BottomSection = ({
   navigation,
   openSearch,
@@ -42,7 +55,13 @@ const BottomSection = ({
   openSearch: () => void;
 }) => {
   const { t } = useTranslation();
-  const { requestParams, refresh, counterCurrency } = useMarketData();
+  const {
+    requestParams,
+    refresh,
+    counterCurrency,
+    marketData,
+    loading,
+  } = useMarketData();
   const {
     range,
     starred = [],
@@ -57,6 +76,9 @@ const BottomSection = ({
   const toggleFilterByStarredAccounts = useCallback(() => {
     if (starredMarketCoins.length > 0) {
       const starred = starFilterOn ? [] : starredMarketCoins;
+      if (!starFilterOn) {
+        track("Page Market Favourites", getAnalyticsProperties(requestParams));
+      }
       refresh({ starred });
     }
   }, [refresh, starFilterOn, starredMarketCoins]);
@@ -71,14 +93,23 @@ const BottomSection = ({
     [t],
   );
 
-  const onChange = useCallback(
-    (value: any) => {
-      refresh(value);
-    },
-    [refresh],
-  );
+  const onChange = (value: any) => {
+    track(
+      "Page Market",
+      getAnalyticsProperties({ ...requestParams, ...value }),
+    );
+    refresh(value);
+  };
 
   const timeRangeValue = timeRanges.find(({ value }) => value === range);
+
+  useEffect(() => {
+    if (search && !loading) {
+      track("Page Market Search", {
+        success: !!marketData?.length,
+      });
+    }
+  }, [search, marketData]);
 
   // @ts-ignore TODO: remove the conditional checks once new version of UI lib is released with that
   const overflowX = ScrollContainerHeader.Header?.PADDING_HORIZONTAL ?? 16;
@@ -90,6 +121,7 @@ const BottomSection = ({
       horizontal
       showsHorizontalScrollIndicator={false}
     >
+      <TrackScreen category="Page" name={"Market"} access={true} />
       {starredMarketCoins.length <= 0 && !starFilterOn ? null : (
         <TouchableOpacity onPress={toggleFilterByStarredAccounts}>
           <Badge>
